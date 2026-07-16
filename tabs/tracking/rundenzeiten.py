@@ -8,19 +8,75 @@ from utils.time_parser import (
 
 
 def init():
-    if "lap_counter" not in st.session_state:
-        st.session_state["lap_counter"] = 1
-
     if "lap_times" not in st.session_state:
         st.session_state["lap_times"] = []
 
+    # Eigener Rundenzähler je Session-Art, Session und Stint
+    if "lap_counters" not in st.session_state:
+        st.session_state["lap_counters"] = {}
 
-def get_current_laps(session_type, stint):
+    if "race_lap_stint" not in st.session_state:
+        st.session_state["race_lap_stint"] = 1
+
+
+def get_lap_counter_key(
+    session_type,
+    session_name,
+    stint,
+):
+    return (
+        f"{session_type}|"
+        f"{session_name}|"
+        f"{int(stint)}"
+    )
+
+
+def get_lap_counter(
+    session_type,
+    session_name,
+    stint,
+):
+    key = get_lap_counter_key(
+        session_type,
+        session_name,
+        stint,
+    )
+
+    if key not in st.session_state["lap_counters"]:
+        st.session_state["lap_counters"][key] = 1
+
+    return st.session_state["lap_counters"][key]
+
+
+def set_lap_counter(
+    session_type,
+    session_name,
+    stint,
+    value,
+):
+    key = get_lap_counter_key(
+        session_type,
+        session_name,
+        stint,
+    )
+
+    st.session_state["lap_counters"][key] = max(
+        1,
+        int(value),
+    )
+
+
+def get_current_laps(
+    session_type,
+    stint,
+    session_name,
+):
     return [
         lap
         for lap in st.session_state["lap_times"]
         if lap.get("Session-Art") == session_type
         and lap.get("Stint") == stint
+        and lap.get("Trainingssession") == session_name
     ]
 
 
@@ -43,24 +99,27 @@ def get_best_lap(valid_laps):
     )
 
 
-def get_best_sector(valid_laps, sector_key):
-    sector_values = []
+def get_best_sector(
+    valid_laps,
+    sector_key,
+):
+    values = []
 
     for lap in valid_laps:
-        sector_value = parse_time_to_seconds(
+        value = parse_time_to_seconds(
             lap.get(sector_key, "")
         )
 
-        if sector_value is not None:
-            sector_values.append(sector_value)
+        if value is not None:
+            values.append(value)
 
-    if not sector_values:
-        return None
-
-    return min(sector_values)
+    return min(values) if values else None
 
 
-def show_statistics(laps, use_sectors):
+def show_statistics(
+    laps,
+    use_sectors,
+):
     valid_laps = get_valid_laps(laps)
     best_lap = get_best_lap(valid_laps)
 
@@ -69,101 +128,106 @@ def show_statistics(laps, use_sectors):
             valid_laps,
             "Sektor 1",
         )
+
         best_s2 = get_best_sector(
             valid_laps,
             "Sektor 2",
         )
+
         best_s3 = get_best_sector(
             valid_laps,
             "Sektor 3",
         )
 
-        if (
-            best_s1 is not None
-            and best_s2 is not None
-            and best_s3 is not None
+        if all(
+            value is not None
+            for value in [
+                best_s1,
+                best_s2,
+                best_s3,
+            ]
         ):
-            ideal_lap = best_s1 + best_s2 + best_s3
+            ideal_lap = (
+                best_s1
+                + best_s2
+                + best_s3
+            )
         else:
             ideal_lap = None
 
         col1, col2, col3, col4, col5 = st.columns(5)
 
-        with col1:
-            st.metric(
-                "Beste Runde",
-                (
-                    best_lap["Rundenzeit"]
-                    if best_lap
-                    else "-"
-                ),
-            )
+        col1.metric(
+            "Beste Runde",
+            (
+                best_lap["Rundenzeit"]
+                if best_lap
+                else "-"
+            ),
+        )
 
-        with col2:
-            st.metric(
-                "Bester Sektor 1",
-                (
-                    f"{best_s1:.3f}"
-                    if best_s1 is not None
-                    else "-"
-                ),
-            )
+        col2.metric(
+            "Bester Sektor 1",
+            (
+                f"{best_s1:.3f} s"
+                if best_s1 is not None
+                else "-"
+            ),
+        )
 
-        with col3:
-            st.metric(
-                "Bester Sektor 2",
-                (
-                    f"{best_s2:.3f}"
-                    if best_s2 is not None
-                    else "-"
-                ),
-            )
+        col3.metric(
+            "Bester Sektor 2",
+            (
+                f"{best_s2:.3f} s"
+                if best_s2 is not None
+                else "-"
+            ),
+        )
 
-        with col4:
-            st.metric(
-                "Bester Sektor 3",
-                (
-                    f"{best_s3:.3f}"
-                    if best_s3 is not None
-                    else "-"
-                ),
-            )
+        col4.metric(
+            "Bester Sektor 3",
+            (
+                f"{best_s3:.3f} s"
+                if best_s3 is not None
+                else "-"
+            ),
+        )
 
-        with col5:
-            st.metric(
-                "Ideale Runde",
-                (
-                    format_seconds(ideal_lap)
-                    if ideal_lap is not None
-                    else "-"
-                ),
-            )
+        col5.metric(
+            "Ideale Runde",
+            (
+                format_seconds(ideal_lap)
+                if ideal_lap is not None
+                else "-"
+            ),
+        )
 
     else:
         col1, col2 = st.columns(2)
 
-        with col1:
-            st.metric(
-                "Beste Runde",
-                (
-                    best_lap["Rundenzeit"]
-                    if best_lap
-                    else "-"
-                ),
-            )
+        col1.metric(
+            "Beste Runde",
+            (
+                best_lap["Rundenzeit"]
+                if best_lap
+                else "-"
+            ),
+        )
 
-        with col2:
-            st.metric(
-                "Gültige Runden",
-                len(valid_laps),
-            )
+        col2.metric(
+            "Gültige Runden",
+            len(valid_laps),
+        )
 
 
-def show_lap_table(laps, use_sectors):
+def show_lap_table(
+    laps,
+    use_sectors,
+):
     if not laps:
         return
 
-    table_rows = []
+    rows = []
 
     for lap in laps:
         row = {
@@ -171,25 +235,41 @@ def show_lap_table(laps, use_sectors):
             "Stint": lap.get("Stint"),
             "Rundenart": lap.get("Rundenart"),
             "Rundenzeit": lap.get("Rundenzeit"),
-            "Gültig": "Ja" if lap.get("Gültig") else "Nein",
-            "Bemerkung": lap.get("Bemerkung", ""),
+            "Gültig": (
+                "Ja"
+                if lap.get("Gültig")
+                else "Nein"
+            ),
+            "Bemerkung": lap.get(
+                "Bemerkung",
+                "",
+            ),
         }
 
         if use_sectors:
             row.update(
                 {
-                    "Sektor 1": lap.get("Sektor 1", ""),
-                    "Sektor 2": lap.get("Sektor 2", ""),
-                    "Sektor 3": lap.get("Sektor 3", ""),
+                    "Sektor 1": lap.get(
+                        "Sektor 1",
+                        "",
+                    ),
+                    "Sektor 2": lap.get(
+                        "Sektor 2",
+                        "",
+                    ),
+                    "Sektor 3": lap.get(
+                        "Sektor 3",
+                        "",
+                    ),
                 }
             )
 
-        table_rows.append(row)
+        rows.append(row)
 
-    dataframe = pd.DataFrame(table_rows)
+    dataframe = pd.DataFrame(rows)
 
     if use_sectors:
-        column_order = [
+        columns = [
             "Runde",
             "Stint",
             "Rundenart",
@@ -201,7 +281,7 @@ def show_lap_table(laps, use_sectors):
             "Bemerkung",
         ]
     else:
-        column_order = [
+        columns = [
             "Runde",
             "Stint",
             "Rundenart",
@@ -210,10 +290,8 @@ def show_lap_table(laps, use_sectors):
             "Bemerkung",
         ]
 
-    dataframe = dataframe[column_order]
-
     st.dataframe(
-        dataframe,
+        dataframe[columns],
         use_container_width=True,
         hide_index=True,
     )
@@ -225,13 +303,14 @@ def show():
     st.header("Rundenzeiten")
 
     if "training_overview" not in st.session_state:
-        st.warning("Bitte zuerst die Übersicht ausfüllen.")
+        st.warning(
+            "Bitte zuerst die Übersicht ausfüllen."
+        )
         return
 
-    overview = st.session_state["training_overview"]
-    stint = overview.get("Stint", 1)
-    ziel = overview.get("Ziel", "-")
-    session_name = overview.get("Trainingssession", "-")
+    overview = st.session_state[
+        "training_overview"
+    ]
 
     session_type = st.session_state.get(
         "tracking_info",
@@ -241,6 +320,54 @@ def show():
         "Training",
     )
 
+    if overview.get("Session-Art") != session_type:
+        st.warning(
+            "Bitte zuerst die Übersicht für die "
+            "aktuelle Session-Art speichern."
+        )
+        return
+
+    session_name = overview.get(
+        "Trainingssession",
+        session_type,
+    )
+
+    ziel = overview.get(
+        "Ziel",
+        session_type,
+    )
+
+    # Beim Rennen wird der Stint direkt hier gewählt.
+    if session_type == "Rennen":
+        stint = st.number_input(
+            "Stint",
+            min_value=1,
+            value=int(
+                st.session_state[
+                    "race_lap_stint"
+                ]
+            ),
+            step=1,
+            key="race_lap_stint_input",
+        )
+
+        stint = int(stint)
+
+        st.session_state[
+            "race_lap_stint"
+        ] = stint
+
+    else:
+        stint = int(
+            overview.get("Stint", 1)
+        )
+
+    current_counter = get_lap_counter(
+        session_type,
+        session_name,
+        stint,
+    )
+
     use_sectors = session_type in [
         "Training",
         "Qualifying",
@@ -248,20 +375,16 @@ def show():
 
     col1, col2, col3 = st.columns(3)
 
-    with col1:
-        st.metric("Stint", stint)
-
-    with col2:
-        st.metric("Session", session_name)
-
-    with col3:
-        st.metric("Ziel", ziel)
+    col1.metric("Stint", stint)
+    col2.metric("Session", session_name)
+    col3.metric("Ziel", ziel)
 
     st.divider()
 
     current_laps = get_current_laps(
         session_type,
         stint,
+        session_name,
     )
 
     show_statistics(
@@ -278,28 +401,47 @@ def show():
     with col_lap:
         st.metric(
             "Aktuelle Runde",
-            st.session_state["lap_counter"],
+            current_counter,
         )
 
     with col_minus:
         if st.button(
             "➖",
-            key="lap_minus",
+            key=(
+                f"lap_minus_"
+                f"{session_type}_"
+                f"{session_name}_"
+                f"{stint}"
+            ),
             use_container_width=True,
         ):
-            st.session_state["lap_counter"] = max(
-                1,
-                st.session_state["lap_counter"] - 1,
+            set_lap_counter(
+                session_type,
+                session_name,
+                stint,
+                current_counter - 1,
             )
+
             st.rerun()
 
     with col_plus:
         if st.button(
             "➕",
-            key="lap_plus",
+            key=(
+                f"lap_plus_"
+                f"{session_type}_"
+                f"{session_name}_"
+                f"{stint}"
+            ),
             use_container_width=True,
         ):
-            st.session_state["lap_counter"] += 1
+            set_lap_counter(
+                session_type,
+                session_name,
+                stint,
+                current_counter + 1,
+            )
+
             st.rerun()
 
     if ziel in [
@@ -321,7 +463,14 @@ def show():
             "In Lap",
         ]
 
-    with st.form("lap_form"):
+    form_key = (
+        f"lap_form_"
+        f"{session_type}_"
+        f"{session_name}_"
+        f"{stint}"
+    )
+
+    with st.form(form_key):
         if use_sectors:
             st.subheader("Sektorzeiten")
 
@@ -345,16 +494,26 @@ def show():
                     placeholder="35.025",
                 )
 
-            s1 = parse_time_to_seconds(sector_1)
-            s2 = parse_time_to_seconds(sector_2)
-            s3 = parse_time_to_seconds(sector_3)
+            s1 = parse_time_to_seconds(
+                sector_1
+            )
 
-            if (
-                s1 is not None
-                and s2 is not None
-                and s3 is not None
+            s2 = parse_time_to_seconds(
+                sector_2
+            )
+
+            s3 = parse_time_to_seconds(
+                sector_3
+            )
+
+            if all(
+                value is not None
+                for value in [s1, s2, s3]
             ):
-                total_seconds = s1 + s2 + s3
+                total_seconds = (
+                    s1 + s2 + s3
+                )
+
                 lap_time = format_seconds(
                     total_seconds
                 )
@@ -373,8 +532,10 @@ def show():
                 placeholder="1:47.263",
             )
 
-            total_seconds = parse_time_to_seconds(
-                lap_time
+            total_seconds = (
+                parse_time_to_seconds(
+                    lap_time
+                )
             )
 
             sector_1 = ""
@@ -408,9 +569,11 @@ def show():
                 )
                 return
 
-            current_lap = st.session_state[
-                "lap_counter"
-            ]
+            current_lap = get_lap_counter(
+                session_type,
+                session_name,
+                stint,
+            )
 
             lap_entry = {
                 "Session-Art": session_type,
@@ -428,15 +591,21 @@ def show():
                 "Bemerkung": notes,
             }
 
-            st.session_state["lap_times"].append(
-                lap_entry
-            )
+            st.session_state[
+                "lap_times"
+            ].append(lap_entry)
 
-            st.session_state["lap_counter"] += 1
+            set_lap_counter(
+                session_type,
+                session_name,
+                stint,
+                current_lap + 1,
+            )
 
             st.success(
                 f"Runde {current_lap} gespeichert."
             )
+
             st.rerun()
 
     st.divider()
@@ -444,6 +613,7 @@ def show():
     current_laps = get_current_laps(
         session_type,
         stint,
+        session_name,
     )
 
     if current_laps:
@@ -455,6 +625,6 @@ def show():
         )
     else:
         st.info(
-            "Für diesen Stint wurden noch keine "
-            "Runden gespeichert."
+            f"Für Stint {stint} wurden noch "
+            "keine Runden gespeichert."
         )

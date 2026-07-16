@@ -15,6 +15,13 @@ from tabs.tracking import (
     rennen_ergebnis,
 )
 
+from tabs.analyse import (
+    uebersicht_analyse,
+    rundenanalyse,
+    reifenanalyse,
+    spritanalyse,
+    reifen_rundenzeit,
+)
 
 st.set_page_config(
     page_title="ACC Analyse",
@@ -427,8 +434,31 @@ elif mode == "Daten tracken":
 
 elif mode == "Daten analysieren":
     st.header("Daten analysieren")
-    st.info("Der Analysebereich wird später erstellt.")
 
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(
+        [
+            "Übersicht",
+            "Rundenanalyse",
+            "Reifenanalyse",
+            "Spritverbrauch",
+            "Reifen vs. Rundenzeit",
+        ]
+    )
+
+    with tab1:
+        uebersicht_analyse.show()
+
+    with tab2:
+        rundenanalyse.show()
+
+    with tab3:
+        reifenanalyse.show()
+
+    with tab4:
+        spritanalyse.show()
+
+    with tab5:
+        reifen_rundenzeit.show()
 
 # =========================================================
 # STRATEGIE PLANEN
