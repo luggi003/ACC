@@ -23,6 +23,15 @@ from tabs.analyse import (
     reifen_rundenzeit,
 )
 
+from tabs.strategie import (
+    rennparameter,
+    kraftstoffstrategie,
+    stintplanung,
+    reifenstrategie,
+    boxenstrategie,
+    strategieuebersicht,
+)
+
 st.set_page_config(
     page_title="ACC Analyse",
     layout="wide",
@@ -121,7 +130,11 @@ if not st.session_state["start_info_saved"]:
 
 st.title("ACC – Analyse")
 
-info = st.session_state["allgemeine_info"]
+info = st.session_state.get("allgemeine_info")
+
+if info is None:
+    st.warning("Bitte zuerst eine Session anlegen.")
+    st.stop() 
 track = info["Track"]
 
 st.markdown("---")
@@ -466,4 +479,32 @@ elif mode == "Daten analysieren":
 
 elif mode == "Strategie planen":
     st.header("Strategie planen")
-    st.info("Der Strategie-Planner wird später erstellt.")
+
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(
+        [
+            "Rennparameter",
+            "Kraftstoffstrategie",
+            "Stintplanung",
+            "Reifenstrategie",
+            "Boxenstrategie",
+            "Übersicht",
+        ]
+    )
+
+    with tab1:
+        rennparameter.show()
+
+    with tab2:
+        kraftstoffstrategie.show()
+
+    with tab3:
+        stintplanung.show()
+
+    with tab4:
+        reifenstrategie.show()
+
+    with tab5:
+        boxenstrategie.show()
+
+    with tab6:
+        strategieuebersicht.show()
